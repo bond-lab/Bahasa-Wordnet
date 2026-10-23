@@ -33,6 +33,8 @@ CITATION = (
     " Information and Computation (PACLIC 25). pp 258\u2013267. Singapore."
 )
 
+URL = "https://bond-lab.github.io/Bahasa-Wordnet/"
+
 # Per-language output metadata (keyed by WN-LMF language code)
 LANG_META = {
     "id": {
@@ -158,6 +160,7 @@ def main():
     lex["label"] = meta["label"]
     lex["license"] = meta["license"]
     lex["citation"] = CITATION
+    lex["url"] = URL
     lex["version"] = args.version or datetime.date.today().isoformat()
 
     prefix = new_prefix  # use new prefix for the rest of the script
