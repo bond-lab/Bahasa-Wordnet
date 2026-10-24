@@ -7,14 +7,22 @@ Interlingual Index (CILI).
 Web page: <https://bond-lab.github.io/Bahasa-Wordnet/>
 (formerly <https://wn-msa.sourceforge.net/>)
 
-## Version 1.3 (2026-10)
+## Version 1.4 (2026-10)
 
 | | Indonesian (`wnb-id`) | Malay (`wnb-zsm`) |
 |---|---|---|
-| Synsets | 41,829 | 36,272 |
-| Words (lexical entries) | 41,578 | 37,348 |
-| Senses | 106,692 | 94,081 |
+| Synsets | 39,835 | 34,365 |
+| Words (lexical entries) | 39,398 | 35,913 |
+| Senses | 87,358 | 79,862 |
 | Definitions | 7,322 | – |
+
+Release 1.4 removes senses found wrong in a review of every sense not
+marked hand-checked (Claude Haiku flagged suspects, two blind Claude Opus
+runs judged them, an Opus adjudicator decided disagreements): 19,335 from
+Indonesian (2,551 of them Malaysian words) and 14,348 from Malay (413 of
+them Indonesian words), lowers the confidence of 816 and 101 undecided
+ones, and moves 135 words to the right variety.  See
+`corrections/README.md`.
 
 Each language is a WN-LMF 1.4 package that extends the English
 `omw-en:2.0` wordnet (`<Requires ref="omw-en" version="2.0"/>`).  They
@@ -29,13 +37,14 @@ definitions from `data/wn-ind-def.tab`; see `scripts/merge_bahasa.py`.
 ```python
 import wn
 wn.download("omw-en:2.0")
-wn.download("https://github.com/bond-lab/Bahasa-Wordnet/releases/download/v1.3/wnb-id-1.3.tar.xz")
-wn.download("https://github.com/bond-lab/Bahasa-Wordnet/releases/download/v1.3/wnb-zsm-1.3.tar.xz")
-wn.Wordnet("wnb-id:1.3").words("anjing")
+wn.download("https://github.com/bond-lab/Bahasa-Wordnet/releases/download/v1.4/wnb-id-1.4.tar.xz")
+wn.download("https://github.com/bond-lab/Bahasa-Wordnet/releases/download/v1.4/wnb-zsm-1.4.tar.xz")
+wn.Wordnet("wnb-id:1.4").words("anjing")
 ```
 
 ## History
 
+* 1.4 (2026-10): reviewed senses (LLM review, see `corrections/`)
 * 1.3 (2026-10): moved to GitHub; WN-LMF packages
 * 1.2 (2017-10): new synsets and lemmas from KBBI and KD via scientific names
 * 1.1 (2015-01): new data from Ruli Manurung and Lian Tze Lim; checked against KBBI and KD

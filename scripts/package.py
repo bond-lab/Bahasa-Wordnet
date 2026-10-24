@@ -37,7 +37,8 @@ def main() -> None:
     wn_id, version = lexicon_id_version(xml)
     outdir = Path(args.outdir)
     pkg = outdir / wn_id
-    pkg.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(pkg, ignore_errors=True)  # a package holds exactly one XML
+    pkg.mkdir(parents=True)
     shutil.copy(xml, pkg / f"{wn_id}-{version}.xml")
     for name in ("README.md", "LICENSE", "citation.bib"):
         shutil.copy(ROOT / name, pkg / name)
