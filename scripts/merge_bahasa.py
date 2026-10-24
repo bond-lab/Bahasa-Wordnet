@@ -197,8 +197,10 @@ def apply_definition_fixes(lex, tsv, prefix):
     """Apply corrections/definitions.tsv rows for this lexicon.
 
     A row replaces the synset's definition old_value with new_value, or
-    removes it if new_value is empty; a row whose old_value is not the
-    current definition is skipped (stale).  Returns a Counter of what was done.
+    removes it if new_value is empty; with a confidence, the definition gets
+    that confidenceScore and the reason as its note.  A row whose old_value
+    is not the current definition is skipped (stale).  Returns a Counter of
+    what was done.
     """
     done = Counter()
     if not Path(tsv).exists():
@@ -213,6 +215,12 @@ def apply_definition_fixes(lex, tsv, prefix):
         hit = [d for d in defs if d["text"] == r["old_value"]]
         if not hit:
             done["stale"] += 1
+            continue
+        if r.get("confidence"):
+            hit[0]["meta"] = {**(hit[0].get("meta") or {}),
+                              "confidenceScore": float(r["confidence"]), "note": r["reason"]}
+            done["lowered"] += 1
+        if r["new_value"] == r["old_value"]:
             continue
         if r["new_value"]:
             hit[0]["text"] = r["new_value"]
