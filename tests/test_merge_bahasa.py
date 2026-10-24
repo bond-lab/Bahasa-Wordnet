@@ -53,3 +53,27 @@ def test_remove_and_lower(tmp_path: Path) -> None:
     done = apply_corrections(lex, tsv, "wnb-zsm")
     assert done["lowered"] == 1
     assert lex["entries"][0]["senses"][0]["meta"] == {"confidenceScore": 0.5}
+
+
+def test_rename_moves_sense_or_drops_duplicate(tmp_path: Path) -> None:
+    # Arrange
+    tsv = tmp_path / "senses.tsv"
+    tsv.write_text(HEAD.replace("date\n", "date\tnew_lemma\n")
+                   + "wnb-zsm-1-n\tsoalan \trename\t\tstray space\tt\td\tsoalan\n"
+                   "wnb-zsm-1-n\tsoal\trename\t\tstray space\tt\td\tpertanyaan\n",
+                   encoding="utf-8")
+    lex = lexicon()
+    lex["entries"] += [
+        {"id": "w2", "lemma": {"writtenForm": "soalan ", "partOfSpeech": "n"},
+         "senses": [{"id": "wnb-zsm-1-n-w2", "synset": "wnb-zsm-1-n"}]},
+        {"id": "w3", "lemma": {"writtenForm": "soal", "partOfSpeech": "n"},
+         "senses": [{"id": "wnb-zsm-1-n-w3", "synset": "wnb-zsm-1-n"}]}]
+
+    # Act
+    done = apply_corrections(lex, tsv, "wnb-zsm")
+
+    # Assert
+    assert (done["renamed"], done["rename: already there"]) == (1, 1)
+    forms = {e["lemma"]["writtenForm"]: [s["id"] for s in e["senses"]] for e in lex["entries"]}
+    assert forms["soalan"] == ["wnb-zsm-1-n-w1"]
+    assert forms["pertanyaan"] == ["wnb-zsm-1-n-w3"]

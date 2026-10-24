@@ -10,7 +10,7 @@ diffs and reapplied on every rebuild.
 Tab-separated, UTF-8, with a header row:
 
 ```
-synset_id	lemma	action	confidence	reason	source	date
+synset_id	lemma	action	confidence	reason	source	date	new_lemma
 ```
 
 A sense is named by its synset ID, whose prefix gives the lexicon
@@ -19,6 +19,9 @@ A sense is named by its synset ID, whose prefix gives the lexicon
 
 * `remove`: delete the sense, and the entry if it has no senses left;
 * `lower`: set `confidenceScore` to `confidence` unless it is already lower;
+* `rename`: move the sense to the entry for `new_lemma` (same part of
+  speech), creating it if needed, or drop the sense if that entry already
+  has the synset;
 * `add`: add the sense, creating the entry if the lemma has none with the
   synset's part of speech (used to move a word to the right variety).
 
@@ -46,6 +49,9 @@ meaning was not judged wrong and that lexicon does not have it already
 Six of the 136 moves into wnb-zsm (*melocot*, *jubin*, *pusingan*,
 *Orang Cili*, *labuh*, *otah*) are skipped because their synset is not in the
 Malay export; `merge_bahasa.py` reports them as `add: no synset`.
+
+Two `rename` rows with source `form: mechanical` (made by NTU-MC's
+`scripts/form_fixes.py`) strip a trailing space (`banjir ` → `banjir`).
 
 The reviews, reasons and scripts are in the NTU-MC repository
 (`scripts/triage_review.py`; the run files are in `build/triage*/`).

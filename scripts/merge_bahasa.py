@@ -112,8 +112,9 @@ def apply_corrections(lex, tsv, prefix):
     """Apply corrections/senses.tsv rows for this lexicon (synset_id starts with prefix).
 
     remove deletes the sense, lower sets its confidenceScore (unless already
-    lower), add creates the sense (and the entry if the lemma has none with
-    that part of speech).  Must run before the synset clean-up, so that a
+    lower), rename moves the sense to the entry for new_lemma (same part of
+    speech; dropped if that entry already has the synset), add creates the
+    sense (and the entry if the lemma has none with that part of speech).  Must run before the synset clean-up, so that a
     synset that gains a sense is kept.  Returns a Counter of what was done.
     """
     done = Counter()
@@ -123,6 +124,7 @@ def apply_corrections(lex, tsv, prefix):
         rows = [r for r in csv.DictReader(fh, delimiter="\t", quoting=csv.QUOTE_NONE)
                 if r["synset_id"].startswith(prefix + "-")]
     edit = {(r["synset_id"], r["lemma"]): r for r in rows if r["action"] != "add"}
+    moved = []  # (sense, new lemma, part of speech)
     for entry in lex["entries"]:
         lemma = entry["lemma"]["writtenForm"]
         kept = []
@@ -134,6 +136,9 @@ def apply_corrections(lex, tsv, prefix):
             done["matched"] += 1
             if row["action"] == "remove":
                 done["removed"] += 1
+                continue
+            if row["action"] == "rename":
+                moved.append((sense, row["new_lemma"], entry["lemma"]["partOfSpeech"]))
                 continue
             meta = sense.get("meta") or {}
             if float(meta.get("confidenceScore", 1.0)) > float(row["confidence"]):
@@ -147,6 +152,18 @@ def apply_corrections(lex, tsv, prefix):
     synsets = {ss["id"]: ss for ss in lex["synsets"]}
     by_lemma = {(e["lemma"]["writtenForm"], e["lemma"]["partOfSpeech"]): e
                 for e in lex["entries"]}
+    for n, (sense, new, pos) in enumerate(moved):
+        target = by_lemma.get((new, pos))
+        if target is None:
+            target = {"id": f"wrename{n}", "senses": [],
+                      "lemma": {"writtenForm": new, "partOfSpeech": pos}}
+            lex["entries"].append(target)
+            by_lemma[(new, pos)] = target
+        if any(se["synset"] == sense["synset"] for se in target["senses"]):
+            done["rename: already there"] += 1  # members are cleaned up later
+        else:
+            target["senses"].append(sense)
+            done["renamed"] += 1
     for n, r in enumerate(r for r in rows if r["action"] == "add"):
         ss = synsets.get(r["synset_id"])
         if ss is None:
