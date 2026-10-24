@@ -51,7 +51,15 @@ MIT: see [LICENSE](LICENSE).
 Nurril Hirfana Mohamed Noor, Suerya Sapuan and Francis Bond (2011).
 Creating the open Wordnet Bahasa.  In *Proceedings of the 25th Pacific
 Asia Conference on Language, Information and Computation (PACLIC 25)*,
-pp 258–267. Singapore.  See [citation.bib](citation.bib).
+pp 255–264. Singapore.  See [citation.bib](citation.bib), which also
+has the papers on the combined Wordnet Bahasa (Bond et al. 2014) and
+its definitions (Moeljadi and Bond 2016).
+
+## People
+
+Francis Bond, Nurril Hirfana Mohamed Noor, Suerya Sapuan, Muhammad
+Zulhelmy Mohamed Rosman, Hammam Riza, Tan Enya Kong, Ruli Manurung,
+Lian Tze Lim, David Moeljadi and Hannah Yun Jung Choi.
 
 ## Raw data
 
