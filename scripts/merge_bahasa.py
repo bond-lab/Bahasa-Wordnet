@@ -10,14 +10,17 @@ it with data from the Bahasa Wordnet tab files:
   - wn-msa-all.tab: confidence scores used to filter senses
     (keep only confidence > 0.85 or senses not in tab data)
   - wn-ind-def.tab: Indonesian definitions added to synsets
+  - corrections/senses.tsv: senses to remove, lower or add (see
+    corrections/README.md)
 
 The tab data is from https://github.com/bond-lab/Bahasa-Wordnet
 """
 
 import argparse
+import csv
 import datetime
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from wn import lmf
@@ -105,6 +108,66 @@ def load_tab_defs(tab_dir):
     return defs
 
 
+def apply_corrections(lex, tsv, prefix):
+    """Apply corrections/senses.tsv rows for this lexicon (synset_id starts with prefix).
+
+    remove deletes the sense, lower sets its confidenceScore (unless already
+    lower), add creates the sense (and the entry if the lemma has none with
+    that part of speech).  Must run before the synset clean-up, so that a
+    synset that gains a sense is kept.  Returns a Counter of what was done.
+    """
+    done = Counter()
+    if not Path(tsv).exists():
+        return done
+    with open(tsv, encoding="utf-8", newline="") as fh:
+        rows = [r for r in csv.DictReader(fh, delimiter="\t", quoting=csv.QUOTE_NONE)
+                if r["synset_id"].startswith(prefix + "-")]
+    edit = {(r["synset_id"], r["lemma"]): r for r in rows if r["action"] != "add"}
+    for entry in lex["entries"]:
+        lemma = entry["lemma"]["writtenForm"]
+        kept = []
+        for sense in entry.get("senses", []):
+            row = edit.get((sense["synset"], lemma))
+            if row is None:
+                kept.append(sense)
+                continue
+            done["matched"] += 1
+            if row["action"] == "remove":
+                done["removed"] += 1
+                continue
+            meta = sense.get("meta") or {}
+            if float(meta.get("confidenceScore", 1.0)) > float(row["confidence"]):
+                meta["confidenceScore"] = float(row["confidence"])
+                sense["meta"] = meta
+                done["lowered"] += 1
+            kept.append(sense)
+        entry["senses"] = kept
+    done["unmatched"] = len(edit) - done.pop("matched", 0)
+
+    synsets = {ss["id"]: ss for ss in lex["synsets"]}
+    by_lemma = {(e["lemma"]["writtenForm"], e["lemma"]["partOfSpeech"]): e
+                for e in lex["entries"]}
+    for n, r in enumerate(r for r in rows if r["action"] == "add"):
+        ss = synsets.get(r["synset_id"])
+        if ss is None:
+            done["add: no synset"] += 1
+            continue
+        entry = by_lemma.get((r["lemma"], ss["partOfSpeech"]))
+        if entry is None:
+            entry = {"id": f"wadd{n}", "senses": [],
+                     "lemma": {"writtenForm": r["lemma"], "partOfSpeech": ss["partOfSpeech"]}}
+            lex["entries"].append(entry)
+            by_lemma[(r["lemma"], ss["partOfSpeech"])] = entry
+        if any(se["synset"] == ss["id"] for se in entry["senses"]):
+            done["add: already there"] += 1
+            continue
+        sid = f"{ss['id']}-{entry['id']}"
+        entry["senses"].append({"id": sid, "synset": ss["id"]})
+        ss["members"] = ss.get("members", []) + [sid]
+        done["added"] += 1
+    return done
+
+
 def strip_prefix(synset_id, prefix):
     """Strip lexicon prefix from synset ID: 'ntumc-id-00001740-a' -> '00001740-a'."""
     if synset_id.startswith(prefix + "-"):
@@ -118,6 +181,10 @@ def main():
     parser.add_argument("xml", help="WN-LMF XML file from getwn.py")
     parser.add_argument("tab_dir", help="Directory with wn-msa-all.tab and wn-ind-def.tab")
     parser.add_argument("-o", "--output", help="Output XML file (default: auto from language)")
+    parser.add_argument("--corrections",
+                        default=str(Path(__file__).resolve().parents[1] / "corrections"
+                                    / "senses.tsv"),
+                        help="Sense corrections (default: corrections/senses.tsv)")
     parser.add_argument("--version", default=None,
                         help="Release version (default: today's date)")
     args = parser.parse_args()
@@ -172,6 +239,9 @@ def main():
     tab_defs = load_tab_defs(args.tab_dir) if lang == "id" else {}
     if tab_defs:
         print(f"  Loaded {len(tab_defs)} definitions from wn-ind-def.tab")
+
+    fixes = apply_corrections(lex, args.corrections, prefix)
+    print(f"  Corrections: {dict(fixes)}")
 
     # Build set of synsets referenced by kept senses (for cleanup)
     kept_synsets = set()
