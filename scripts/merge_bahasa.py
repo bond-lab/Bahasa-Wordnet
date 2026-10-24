@@ -114,9 +114,10 @@ def apply_corrections(lex, tsv, prefix):
     remove deletes the sense, lower sets its confidenceScore (unless already
     lower), rename moves the sense to the entry for new_lemma (same part of
     speech; dropped if that entry already has the synset), add creates the
-    sense (and the entry if the lemma has none with that part of speech).  Must run before the synset clean-up, so that a
-    synset that gains a sense is kept.  Returns a Counter of what was done
-    and the ids of the added senses (which the confidence filter keeps).
+    sense (and the entry if the lemma has none with that part of speech; a
+    sense already there is kept).  Must run before the synset clean-up, so
+    that a synset that gains a sense is kept.  Returns a Counter of what was
+    done and the ids of the added senses (which the confidence filter keeps).
     """
     done = Counter()
     added = set()
@@ -177,7 +178,10 @@ def apply_corrections(lex, tsv, prefix):
                      "lemma": {"writtenForm": r["lemma"], "partOfSpeech": ss["partOfSpeech"]}}
             lex["entries"].append(entry)
             by_lemma[(r["lemma"], ss["partOfSpeech"])] = entry
-        if any(se["synset"] == ss["id"] for se in entry["senses"]):
+        there = [se for se in entry["senses"] if se["synset"] == ss["id"]]
+        if there:
+            # e.g. an M or L sense from the database: keep it
+            added.update(se["id"] for se in there)
             done["add: already there"] += 1
             continue
         sid = f"{ss['id']}-{entry['id']}"
