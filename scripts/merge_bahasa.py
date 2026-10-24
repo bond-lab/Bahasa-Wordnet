@@ -9,7 +9,9 @@ it with data from the Bahasa Wordnet tab files:
 
   - wn-msa-all.tab: confidence scores used to filter senses
     (keep only confidence > 0.85 or senses not in tab data)
-  - wn-ind-def.tab: Indonesian definitions added to synsets
+  - wn-ind-def.tab: Indonesian definitions added to synsets; synsets
+    not in the NTU-MC export are created, with their ILI from
+    ili-map-pwn30.tab (from CILI)
   - corrections/senses.tsv: senses to remove, lower or add (see
     corrections/README.md)
 
@@ -20,7 +22,7 @@ import argparse
 import csv
 import datetime
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 from wn import lmf
@@ -62,10 +64,8 @@ def load_tab_senses(tab_dir, lang):
     """
     path = Path(tab_dir) / "wn-msa-all.tab"
     if lang == "id":
-        db_lang = "ind"
         accept = ("B", "I")
     elif lang == "zsm":
-        db_lang = "zsm"
         accept = ("B", "M")
     else:
         print(f"  WARNING: unsupported language {lang}, skipping tab filter",
@@ -185,6 +185,23 @@ def apply_corrections(lex, tsv, prefix):
     return done
 
 
+def load_ili_map(tab_dir):
+    """Load ili-map-pwn30.tab and return {pwn30 synset: ili}.
+
+    Satellites are '-s' in the map but '-a' in NTU-MC, so both are kept.
+    """
+    path = Path(tab_dir) / "ili-map-pwn30.tab"
+    ili = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            parts = line.split()
+            if len(parts) == 2:
+                ili[parts[1]] = parts[0]
+                if parts[1].endswith("-s"):
+                    ili[parts[1][:-1] + "a"] = parts[0]
+    return ili
+
+
 def strip_prefix(synset_id, prefix):
     """Strip lexicon prefix from synset ID: 'ntumc-id-00001740-a' -> '00001740-a'."""
     if synset_id.startswith(prefix + "-"):
@@ -300,17 +317,30 @@ def main():
 
     # Add definitions from tab file
     defs_added = 0
+    synsets_created = 0
+    no_ili = 0
+    ili_map = load_ili_map(args.tab_dir) if tab_defs else {}
     synset_by_id = {ss["id"]: ss for ss in lex["synsets"]}
-    for bare_ss, dfn in tab_defs.items():
+    for bare_ss, dfn in sorted(tab_defs.items()):
         ss_id = f"{prefix}-{bare_ss}"
         ss = synset_by_id.get(ss_id)
         if ss is None:
-            continue
+            # Synset with no word in the NTU-MC database: create it so the
+            # definition is kept (it extends the omw-en synset by ILI)
+            if bare_ss not in ili_map:
+                no_ili += 1
+                continue
+            ss = {"id": ss_id, "ili": ili_map[bare_ss],
+                  "partOfSpeech": bare_ss[-1], "meta": None}
+            lex["synsets"].append(ss)
+            synset_by_id[ss_id] = ss
+            synsets_created += 1
         existing = ss.get("definitions", [])
         if not existing:
             ss["definitions"] = [{"text": dfn, "meta": None}]
             defs_added += 1
-    print(f"  Definitions added: {defs_added}")
+    print(f"  Definitions added: {defs_added} "
+          f"({synsets_created} synsets created, {no_ili} with no ILI skipped)")
 
     # Update synset members to reflect removed senses
     kept_sense_ids = set()
