@@ -115,11 +115,13 @@ def apply_corrections(lex, tsv, prefix):
     lower), rename moves the sense to the entry for new_lemma (same part of
     speech; dropped if that entry already has the synset), add creates the
     sense (and the entry if the lemma has none with that part of speech).  Must run before the synset clean-up, so that a
-    synset that gains a sense is kept.  Returns a Counter of what was done.
+    synset that gains a sense is kept.  Returns a Counter of what was done
+    and the ids of the added senses (which the confidence filter keeps).
     """
     done = Counter()
+    added = set()
     if not Path(tsv).exists():
-        return done
+        return done, added
     with open(tsv, encoding="utf-8", newline="") as fh:
         rows = [r for r in csv.DictReader(fh, delimiter="\t", quoting=csv.QUOTE_NONE)
                 if r["synset_id"].startswith(prefix + "-")]
@@ -181,8 +183,9 @@ def apply_corrections(lex, tsv, prefix):
         sid = f"{ss['id']}-{entry['id']}"
         entry["senses"].append({"id": sid, "synset": ss["id"]})
         ss["members"] = ss.get("members", []) + [sid]
+        added.add(sid)
         done["added"] += 1
-    return done
+    return done, added
 
 
 def load_ili_map(tab_dir):
@@ -274,47 +277,6 @@ def main():
     if tab_defs:
         print(f"  Loaded {len(tab_defs)} definitions from wn-ind-def.tab")
 
-    fixes = apply_corrections(lex, args.corrections, prefix)
-    print(f"  Corrections: {dict(fixes)}")
-
-    # Build set of synsets referenced by kept senses (for cleanup)
-    kept_synsets = set()
-    removed_senses = 0
-    kept_senses = 0
-    empty_entries = 0
-
-    # Filter senses by confidence
-    for entry in lex["entries"]:
-        lemma = entry["lemma"]["writtenForm"]
-        new_senses = []
-        for sense in entry.get("senses", []):
-            ss_id = sense["synset"]
-            bare_ss = strip_prefix(ss_id, prefix)
-            key = (bare_ss, lemma)
-            if key in tab_conf:
-                if tab_conf[key] >= MIN_CONFIDENCE:
-                    new_senses.append(sense)
-                    kept_synsets.add(ss_id)
-                    kept_senses += 1
-                else:
-                    removed_senses += 1
-            else:
-                # Not in tab data — keep (hand-made from DB)
-                new_senses.append(sense)
-                kept_synsets.add(ss_id)
-                kept_senses += 1
-        entry["senses"] = new_senses
-        if not new_senses:
-            empty_entries += 1
-
-    # Remove entries with no senses
-    orig_entries = len(lex["entries"])
-    lex["entries"] = [e for e in lex["entries"] if e.get("senses")]
-
-    print(f"  Senses: kept {kept_senses}, removed {removed_senses}")
-    print(f"  Entries: {orig_entries} -> {len(lex['entries'])} "
-          f"({empty_entries} empty removed)")
-
     # Add definitions from tab file
     defs_added = 0
     synsets_created = 0
@@ -341,6 +303,47 @@ def main():
             defs_added += 1
     print(f"  Definitions added: {defs_added} "
           f"({synsets_created} synsets created, {no_ili} with no ILI skipped)")
+
+    fixes, added = apply_corrections(lex, args.corrections, prefix)
+    print(f"  Corrections: {dict(fixes)}")
+
+    # Build set of synsets referenced by kept senses (for cleanup)
+    kept_synsets = set()
+    removed_senses = 0
+    kept_senses = 0
+    empty_entries = 0
+
+    # Filter senses by confidence
+    for entry in lex["entries"]:
+        lemma = entry["lemma"]["writtenForm"]
+        new_senses = []
+        for sense in entry.get("senses", []):
+            ss_id = sense["synset"]
+            bare_ss = strip_prefix(ss_id, prefix)
+            key = (bare_ss, lemma)
+            if key in tab_conf and sense["id"] not in added:
+                if tab_conf[key] >= MIN_CONFIDENCE:
+                    new_senses.append(sense)
+                    kept_synsets.add(ss_id)
+                    kept_senses += 1
+                else:
+                    removed_senses += 1
+            else:
+                # Not in tab data (hand-made in the DB) or added — keep
+                new_senses.append(sense)
+                kept_synsets.add(ss_id)
+                kept_senses += 1
+        entry["senses"] = new_senses
+        if not new_senses:
+            empty_entries += 1
+
+    # Remove entries with no senses
+    orig_entries = len(lex["entries"])
+    lex["entries"] = [e for e in lex["entries"] if e.get("senses")]
+
+    print(f"  Senses: kept {kept_senses}, removed {removed_senses}")
+    print(f"  Entries: {orig_entries} -> {len(lex['entries'])} "
+          f"({empty_entries} empty removed)")
 
     # Update synset members to reflect removed senses
     kept_sense_ids = set()
