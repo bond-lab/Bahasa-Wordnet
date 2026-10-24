@@ -42,6 +42,21 @@ wn.download("https://github.com/bond-lab/Bahasa-Wordnet/releases/download/v1.4/w
 wn.Wordnet("wnb-id:1.4").words("anjing")
 ```
 
+## Building
+
+The inputs used for 1.4 are `wn-ntumc-ind.xml.xz` and
+`wn-ntumc-zsm.xml.xz` in the NTU-MC release
+[wn-2026.10](https://github.com/bond-lab/NTUMC/releases/tag/wn-2026.10)
+(checksums in its `SHA256SUMS`):
+
+    xz -d wn-ntumc-ind.xml.xz wn-ntumc-zsm.xml.xz
+    scripts/merge_bahasa.py wn-ntumc-ind.xml data --version 1.4 -o release/wnb-id-1.4.xml
+    scripts/merge_bahasa.py wn-ntumc-zsm.xml data --version 1.4 -o release/wnb-zsm-1.4.xml
+    scripts/package.py release/wnb-id-1.4.xml
+    scripts/package.py release/wnb-zsm-1.4.xml
+
+`merge_bahasa.py` applies `corrections/senses.tsv`.
+
 ## History
 
 * 1.4 (2026-10): reviewed senses (LLM review, see `corrections/`)
