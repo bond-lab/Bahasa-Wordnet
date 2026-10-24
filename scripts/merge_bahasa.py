@@ -12,7 +12,8 @@ it with data from the Bahasa Wordnet tab files:
   - wn-ind-def.tab: Indonesian definitions added to synsets; synsets
     not in the NTU-MC export are created, with their ILI from
     ili-map-pwn30.tab (from CILI)
-  - corrections/senses.tsv: senses to remove, lower or add (see
+  - corrections/senses.tsv: senses to remove, lower or add, and
+    corrections/definitions.tsv: definitions to replace or remove (see
     corrections/README.md)
 
 The tab data is from https://github.com/bond-lab/Bahasa-Wordnet
@@ -192,6 +193,36 @@ def apply_corrections(lex, tsv, prefix):
     return done, added
 
 
+def apply_definition_fixes(lex, tsv, prefix):
+    """Apply corrections/definitions.tsv rows for this lexicon.
+
+    A row replaces the synset's definition old_value with new_value, or
+    removes it if new_value is empty; a row whose old_value is not the
+    current definition is skipped (stale).  Returns a Counter of what was done.
+    """
+    done = Counter()
+    if not Path(tsv).exists():
+        return done
+    with open(tsv, encoding="utf-8", newline="") as fh:
+        rows = [r for r in csv.DictReader(fh, delimiter="\t", quoting=csv.QUOTE_NONE)
+                if r["synset_id"].startswith(prefix + "-")]
+    synsets = {ss["id"]: ss for ss in lex["synsets"]}
+    for r in rows:
+        ss = synsets.get(r["synset_id"])
+        defs = ss.get("definitions", []) if ss else []
+        hit = [d for d in defs if d["text"] == r["old_value"]]
+        if not hit:
+            done["stale"] += 1
+            continue
+        if r["new_value"]:
+            hit[0]["text"] = r["new_value"]
+            done["replaced"] += 1
+        else:
+            ss["definitions"] = [d for d in defs if d is not hit[0]]
+            done["removed"] += 1
+    return done
+
+
 def load_ili_map(tab_dir):
     """Load ili-map-pwn30.tab and return {pwn30 synset: ili}.
 
@@ -226,6 +257,10 @@ def main():
                         default=str(Path(__file__).resolve().parents[1] / "corrections"
                                     / "senses.tsv"),
                         help="Sense corrections (default: corrections/senses.tsv)")
+    parser.add_argument("--definitions",
+                        default=str(Path(__file__).resolve().parents[1] / "corrections"
+                                    / "definitions.tsv"),
+                        help="Definition corrections (default: corrections/definitions.tsv)")
     parser.add_argument("--version", default=None,
                         help="Release version (default: today's date)")
     args = parser.parse_args()
@@ -307,6 +342,9 @@ def main():
             defs_added += 1
     print(f"  Definitions added: {defs_added} "
           f"({synsets_created} synsets created, {no_ili} with no ILI skipped)")
+
+    fixes = apply_definition_fixes(lex, args.definitions, prefix)
+    print(f"  Definition corrections: {dict(fixes)}")
 
     fixes, added = apply_corrections(lex, args.corrections, prefix)
     print(f"  Corrections: {dict(fixes)}")
