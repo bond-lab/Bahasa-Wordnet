@@ -47,3 +47,17 @@ NTU-MC `docs/wordnet-model.md`.
 Both logs start empty: the repository had not changed since 1.5.
 Building once more the old way on 2026-11-13 and comparing with the
 release gave no difference for either lexicon.
+
+## Senses the corpus uses (2026-11-13)
+
+The Indonesian release leaves out senses the NTU-MC wordnet marks as
+coming from the Malay data or added in NTU-MC.  The NTU-MC Indonesian
+corpus has 2,139 concepts tagged with 777 such senses: a tagger chose
+each one.  They are added to `wnb-id` (`scripts/add_back_corpus.py`),
+after 175 `add_synset` records for synsets it did not have (ILI only, no
+relations: omw-en has the concept).  The first-logs note above is about
+the state before this.
+
+The 230 corpus-tagged senses that the review removed are not added:
+they wait for a ruling in NTU-MC
+`docs/quality-sample/removed-but-tagged/ind.tsv`.
