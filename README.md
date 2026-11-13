@@ -54,7 +54,20 @@ wn.Wordnet("wnb-id:1.5").words("anjing")
 
 ## Building
 
-The inputs used for 1.5 (as for 1.4) are `wn-ntumc-ind.xml.xz` and
+From 1.5 on, a release is the last release plus the change records in
+`changes/` (see `changes/README.md`):
+
+    ../NTUMC/.venv/bin/python release.py 1.6
+    scripts/package.py release/wnb-id-1.6.xml
+    scripts/package.py release/wnb-zsm-1.6.xml
+
+`release.py` fetches the two 1.5 packages from the GitHub release, checks
+their checksums and applies `changes/wnb-id-1.5.jsonl` and
+`changes/wnb-zsm-1.5.jsonl`.  It needs an NTU-MC checkout next to this
+one, for `ntumc.wordnet`.
+
+Up to 1.5, the wordnets were built from the NTU-MC exports; that build
+and `corrections/` are kept for the record.  The inputs used for 1.5 (as for 1.4) are `wn-ntumc-ind.xml.xz` and
 `wn-ntumc-zsm.xml.xz` in the NTU-MC release
 [wn-2026.10](https://github.com/bond-lab/NTUMC/releases/tag/wn-2026.10)
 (checksums in its `SHA256SUMS`):

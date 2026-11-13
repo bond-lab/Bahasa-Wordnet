@@ -1,5 +1,9 @@
 # Wordnet Bahasa corrections
 
+**Frozen on 2026-11-13.**  From 1.5 on, changes are records in
+`changes/` applied to the last release by `release.py`; nothing here is
+read for a release any more.  These files are how 1.5 was made.
+
 Corrections to the Indonesian and Malay exports of the NTU-MC wordnet,
 applied by `scripts/merge_bahasa.py` before its synset clean-up.  The exports
 are build artefacts, so fixes are kept here as data: auditable, reviewable as
