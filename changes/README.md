@@ -34,9 +34,9 @@ edit or delete an earlier line: to undo a change, add the opposite one.
   dictionary, a corpus) and `reason` are required.
 * A model alone is not a source for an addition.
 * A change to a word in both varieties is two records, one in each file.
-* A synset whose last sense is removed stays unless a `remove_synset`
-  record drops it.  The old build dropped every synset left with no
-  sense and no definition.
+* A synset left with no sense and nothing of its own (definition,
+  example) is dropped by `release.py`, as the old build did: omw-en has
+  the concept through the ILI.  No record is needed.
 
 The actions (`add_sense`, `remove_sense`, `set_confidence`,
 `set_definition`, `add_form`, ...) and the fields each needs are in

@@ -10,7 +10,9 @@ own base and change log.  The base is the released ID-BASE_VERSION.xml,
 downloaded once to build/base/ and checked against its checksum.  The
 changes are changes/ID-BASE_VERSION.jsonl (see changes/README.md).  A
 change that does not fit the base is a conflict: they are listed, and
-nothing is written for that lexicon until they are settled.
+nothing is written for that lexicon until they are settled.  Synsets left
+with no sense and nothing of their own (definition, example) are then
+dropped: omw-en has the concept through the ILI.
 
 Uses ntumc.wordnet from a checkout of NTU-MC beside this one (../NTUMC).
 """
@@ -122,6 +124,8 @@ def release(base: Base, version: str, out: Path) -> list[str]:
     items, conflicts = changes.apply(lmf.read(base.xml), changes.read(base.changes))
     if conflicts:
         return conflicts
+    items, dropped = changes.drop_empty_synsets(items)
+    log.info("Dropped %d synsets with no sense and nothing of their own", len(dropped))
     next(i for i in items if isinstance(i, Lexicon)).version = version
     out.parent.mkdir(parents=True, exist_ok=True)
     lmf.write(out, items)
