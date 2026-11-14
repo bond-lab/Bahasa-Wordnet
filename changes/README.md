@@ -11,8 +11,20 @@ From 1.5 on, the master copy of each lexicon (Indonesian `wnb-id`, Malay
 
 `../NTUMC/.venv/bin/python release.py 1.6` applies the changes to each
 base and writes `release/wnb-id-1.6.xml` and `release/wnb-zsm-1.6.xml`;
-`scripts/package.py` packages them.  After a release, the new XML is the
-base and new, empty logs are started; the old files stay as the history.
+`scripts/package.py` packages them.  After a release, new, empty logs
+are started; the old files stay as the history.
+
+Each lexicon is written twice: the minimal lexicon `ID-min-VERSION.xml`
+(id `ID-min`), which says only what this wordnet itself says, and the
+export `ID-VERSION.xml`, which is what is packaged.  For a concept CILI
+does not have yet, the minimal lexicon holds the words and the
+concept's identifier (`dc:identifier="ntumc00001"`); the English
+definition and the relations are in the shared lexicon `omw-ntumc`, and
+the export puts them back.  `release.py` fails if the export lacks
+anything the wordnet said before it was split.  `omw-ntumc` is read from
+a checkout beside this one, built at the version `release.py` pins
+(`uv run build.py 0.1` at tag `v0.1`).  After a release, the minimal XML
+is the base.
 
 Nothing is rebuilt from the NTU-MC exports any more:
 `scripts/merge_bahasa.py` and `corrections/` are how 1.5 was made, and

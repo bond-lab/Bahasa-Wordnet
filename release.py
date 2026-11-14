@@ -14,6 +14,13 @@ nothing is written for that lexicon until they are settled.  Synsets left
 with no sense and nothing of their own (definition, example) are then
 dropped: omw-en has the concept through the ILI.
 
+Two lexicons are written: ID-min-VERSION.xml, the minimal lexicon (the
+master), which leaves the English definition and the relations of the
+concepts CILI does not have yet to the shared lexicon omw-ntumc; and
+ID-VERSION.xml, the export, with those put back.  omw-ntumc is read
+from a checkout beside this one, built at its tag
+(uv run build.py SHARED_VERSION).
+
 Uses ntumc.wordnet from a checkout of NTU-MC beside this one (../NTUMC).
 """
 
@@ -30,10 +37,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent / "NTUMC"))
 
-from ntumc.wordnet import changes, lmf  # noqa: E402
+from ntumc.wordnet import changes, lmf, shared  # noqa: E402
 from ntumc.wordnet.model import Lexicon  # noqa: E402
 
 BASE_VERSION = "1.5"
+SHARED_VERSION = "0.1"
+SHARED = ROOT.parent / "omw-ntumc" / "build" / f"omw-ntumc-{SHARED_VERSION}.xml"
+SHARED_SHA256 = "6ee5f6a254907d4fbdaa0e4238dddf0c3012ee92ef27fdd7d79815c46ff7c3f0"
 RELEASES = "https://github.com/bond-lab/Bahasa-Wordnet/releases/download"
 
 log = logging.getLogger("release")
@@ -115,10 +125,15 @@ def release(base: Base, version: str, out: Path) -> list[str]:
     Args:
         base: the lexicon's last release
         version: the version of the new release
-        out: the XML file to write; not written if there are conflicts
+        out: the export's XML file; the minimal lexicon goes beside it.
+            Neither is written if there are conflicts
 
     Returns:
         The conflicts, one line each.
+
+    Raises:
+        ValueError: if the export lacks something the lexicon said before
+            it was split.
     """
     fetch_base(base)
     items, conflicts = changes.apply(lmf.read(base.xml), changes.read(base.changes))
@@ -128,7 +143,7 @@ def release(base: Base, version: str, out: Path) -> list[str]:
     log.info("Dropped %d synsets with no sense and nothing of their own", len(dropped))
     next(i for i in items if isinstance(i, Lexicon)).version = version
     out.parent.mkdir(parents=True, exist_ok=True)
-    lmf.write(out, items)
+    shared.write_release(items, shared.load(SHARED, SHARED_SHA256), out)
     return []
 
 
