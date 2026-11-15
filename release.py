@@ -37,7 +37,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent / "NTUMC"))
 
-from ntumc.wordnet import changes, lmf, shared  # noqa: E402
+from ntumc.wordnet import changes, lmf, shared, validate  # noqa: E402
 from ntumc.wordnet.model import Lexicon  # noqa: E402
 
 BASE_VERSION = "1.5"
@@ -140,8 +140,6 @@ def release(base: Base, version: str, out: Path) -> list[str]:
     if conflicts:
         return conflicts
     items, dropped = changes.drop_empty_synsets(items)
-    if changes.shared_ilis(items):
-        return changes.shared_ilis(items)
     log.info("Dropped %d synsets with no sense and nothing of their own", len(dropped))
     next(i for i in items if isinstance(i, Lexicon)).version = version
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -170,8 +168,11 @@ def main() -> None:
             log.error("%s: %s", name, line)
         if conflicts:
             failed = True
-        else:
-            log.info("Wrote %s", out)
+            continue
+        small = out.with_name(f"{name}{shared.SUFFIX}-{args.version}.xml")
+        if not all([validate.check(small), validate.check(out)]):
+            failed = True
+        log.info("Wrote %s", out)
     sys.exit(1 if failed else 0)
 
 

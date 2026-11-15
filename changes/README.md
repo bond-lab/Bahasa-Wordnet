@@ -96,3 +96,10 @@ beginning 77) are not linked here: they belong to omw-pronoun.
 
 The pronoun synsets carry omw-pronoun's identifiers instead
 (`dc:identifier="pronoun:1;Sg"`), from its table of NTU-MC synsets.
+
+## Validation
+
+`release.py` runs the validation of the `wn` module on the files it
+writes (NTU-MC `ntumc.wordnet.validate`).  An error stops the release,
+and so do an ILI on two synsets (`W302`), a word twice in a synset
+(`W202`) and two entries for one word in a synset (`W203`).

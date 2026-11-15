@@ -9,7 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 release = pytest.importorskip("release", reason="needs ../NTUMC (ntumc.wordnet)")
 
-from ntumc.wordnet import changes, lmf  # noqa: E402
+from ntumc.wordnet import changes, lmf, validate  # noqa: E402
 
 
 @pytest.mark.parametrize("name", list(release.BASES))
@@ -37,15 +37,19 @@ def test_the_records_apply_to_the_base_without_conflict(name: str) -> None:
 
 
 @pytest.mark.parametrize("name", list(release.BASES))
-def test_no_ili_is_on_two_synsets(name: str) -> None:
+def test_the_lexicon_passes_the_validation_of_wn(name: str, tmp_path: Path) -> None:
     # Arrange
+    pytest.importorskip("wn")
     base = release.BASES[name]
     if not base.xml.exists():
         pytest.skip("base release not downloaded: run release.py once")
-    # Act
     items, _ = changes.apply(lmf.read(base.xml), changes.read(base.changes))
+    xml = tmp_path / "changed.xml"
+    lmf.write(xml, items)
+    # Act
+    good = validate.check(xml)
     # Assert
-    assert changes.shared_ilis(items) == []
+    assert good
 
 
 def test_each_base_has_its_own_files() -> None:
