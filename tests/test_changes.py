@@ -36,6 +36,18 @@ def test_the_records_apply_to_the_base_without_conflict(name: str) -> None:
     assert conflicts == []
 
 
+@pytest.mark.parametrize("name", list(release.BASES))
+def test_no_ili_is_on_two_synsets(name: str) -> None:
+    # Arrange
+    base = release.BASES[name]
+    if not base.xml.exists():
+        pytest.skip("base release not downloaded: run release.py once")
+    # Act
+    items, _ = changes.apply(lmf.read(base.xml), changes.read(base.changes))
+    # Assert
+    assert changes.shared_ilis(items) == []
+
+
 def test_each_base_has_its_own_files() -> None:
     # Act
     base = release.BASES["wnb-zsm"]

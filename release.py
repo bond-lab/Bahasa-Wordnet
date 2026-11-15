@@ -140,6 +140,8 @@ def release(base: Base, version: str, out: Path) -> list[str]:
     if conflicts:
         return conflicts
     items, dropped = changes.drop_empty_synsets(items)
+    if changes.shared_ilis(items):
+        return changes.shared_ilis(items)
     log.info("Dropped %d synsets with no sense and nothing of their own", len(dropped))
     next(i for i in items if isinstance(i, Lexicon)).version = version
     out.parent.mkdir(parents=True, exist_ok=True)
